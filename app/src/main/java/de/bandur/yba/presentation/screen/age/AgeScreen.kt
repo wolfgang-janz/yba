@@ -30,20 +30,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import de.bandur.yba.R
+import de.bandur.yba.data.profile.Gender
+import de.bandur.yba.data.profile.UserProfile
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
  * Demonstrates the differential changes API.
  */
 @Composable
-fun DifferentialChangesScreen(
+fun AgeScreen(
     permissions: Set<String>,
     permissionsGranted: Boolean,
     latestVo2Max: Vo2MaxRecord?,
-    userProfile: de.bandur.yba.data.profile.UserProfile?,
-    uiState: DifferentialChangesViewModel.UiState,
+    latestHRV: HeartRateVariabilityRmssdRecord?,
+    userProfile: UserProfile?,
+    uiState: AgeViewModel.UiState,
     onError: (Throwable?) -> Unit = {},
     onPermissionsResult: () -> Unit = {},
     onPermissionsLaunch: (Set<String>) -> Unit = {}
@@ -54,10 +59,10 @@ fun DifferentialChangesScreen(
     val errorId = rememberSaveable { mutableStateOf(UUID.randomUUID()) }
 
     // Funktion zur Berechnung des biologischen Alters basierend auf VO₂max
-    fun calculateBiologicalAge(chronologicalAge: Int, vo2Max: Double, gender: de.bandur.yba.data.profile.Gender): Double? {
+    fun calculateBiologicalAge(chronologicalAge: Int, vo2Max: Double, gender: Gender): Double? {
         // Referenz VO₂max Werte basierend auf Geschlecht und Alter
         val referenceVo2Max = when (gender) {
-            de.bandur.yba.data.profile.Gender.MALE -> when (chronologicalAge) {
+            Gender.MALE -> when (chronologicalAge) {
                 in 18..25 -> 47.0
                 in 26..35 -> 44.0
                 in 36..45 -> 41.0
@@ -68,7 +73,7 @@ fun DifferentialChangesScreen(
                 in 86..99 -> 26.0
                 else -> return null
             }
-            de.bandur.yba.data.profile.Gender.FEMALE -> when (chronologicalAge) {
+            Gender.FEMALE -> when (chronologicalAge) {
                 in 18..25 -> 38.0
                 in 26..35 -> 34.0
                 in 36..45 -> 31.0
@@ -80,17 +85,17 @@ fun DifferentialChangesScreen(
                 else -> return null
             }
         }
-        
+
         // Durchschnittliche Abnahme pro Jahr: ca. 0.5 ml/kg/min
         val decreasePerYear = 0.5
-        
+
         // Berechnung: Chronologisches Alter + (Referenz VO₂max - Aktueller VO₂max) / Abnahme pro Jahr
         return chronologicalAge + (referenceVo2Max - vo2Max) / decreasePerYear
     }
 
     LaunchedEffect(uiState) {
         // If the initial data load has not taken place, attempt to load the data.
-        if (uiState is DifferentialChangesViewModel.UiState.Uninitialized) {
+        if (uiState is AgeViewModel.UiState.Uninitialized) {
             onPermissionsResult()
         }
 
@@ -98,13 +103,13 @@ fun DifferentialChangesScreen(
         // was a success or resulted in an error. Where an error occurred, for example in reading
         // and writing to Health Connect, the user is notified, and where the error is one that can
         // be recovered from, an attempt to do so is made.
-        if (uiState is DifferentialChangesViewModel.UiState.Error && errorId.value != uiState.uuid) {
+        if (uiState is AgeViewModel.UiState.Error && errorId.value != uiState.uuid) {
             onError(uiState.exception)
             errorId.value = uiState.uuid
         }
     }
 
-    if (uiState != DifferentialChangesViewModel.UiState.Uninitialized) {
+    if (uiState != AgeViewModel.UiState.Uninitialized) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,
@@ -114,48 +119,48 @@ fun DifferentialChangesScreen(
             item {
                 if (userProfile?.age != null && userProfile.gender != null && userProfile.birthDate != null) {
                     Text(
-                        text = "Profil: ${userProfile.age} Jahre (geboren ${userProfile.birthDate.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))}), ${
+                        text = "Profil: ${userProfile.age} Jahre (geboren ${userProfile.birthDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))}), ${
                             when (userProfile.gender) {
-                                de.bandur.yba.data.profile.Gender.MALE -> "Männlich"
-                                de.bandur.yba.data.profile.Gender.FEMALE -> "Weiblich"
+                                Gender.MALE -> "Männlich"
+                                Gender.FEMALE -> "Weiblich"
                             }
                         }",
                         style = MaterialTheme.typography.h6,
                         modifier = Modifier.padding(8.dp)
                     )
-                    
+
                     // Biologisches Alter berechnen und anzeigen
                     latestVo2Max?.let { vo2Max ->
                         val currentAge = userProfile.age // Local copy to avoid smart cast issues
                         val currentGender = userProfile.gender
-                        
+
                         if (currentAge != null && currentGender != null) {
                             val biologicalAge = calculateBiologicalAge(
-                                currentAge, 
+                                currentAge,
                                 vo2Max.vo2MillilitersPerMinuteKilogram,
                                 currentGender
                             )
-                            
+
                             biologicalAge?.let { bioAge ->
                                 Text(
                                     text = "Biologisches Alter: ${String.format("%.1f", bioAge)} Jahre",
                                     style = MaterialTheme.typography.h5,
                                     modifier = Modifier.padding(8.dp)
                                 )
-                                
+
                                 val ageDifference = bioAge - currentAge
                                 val differenceColor = if (ageDifference > 0) {
                                     MaterialTheme.colors.error
                                 } else {
                                     MaterialTheme.colors.primary
                                 }
-                                
+
                                 val differenceText = if (ageDifference > 0) {
                                     "Du bist ${String.format("%.1f", ageDifference)} Jahre älter als dein chronologisches Alter"
                                 } else {
                                     "Du bist ${String.format("%.1f", kotlin.math.abs(ageDifference))} Jahre jünger als dein chronologisches Alter"
                                 }
-                                
+
                                 Text(
                                     text = differenceText,
                                     color = differenceColor,
@@ -164,6 +169,13 @@ fun DifferentialChangesScreen(
                                 )
                             }
                         }
+                    }
+                    latestHRV?.let { hrv ->
+                        Text(
+                            text = "Letzter HRV-Wert: ${hrv.heartRateVariabilityMillis} ms",
+                            style = MaterialTheme.typography.h6,
+                            modifier = Modifier.padding(8.dp)
+                        )
                     }
                 } else {
                     Text(
