@@ -169,7 +169,7 @@ fun AgeScreen(
                     if (biologicalAgeVo2Max != null && biologicalAgeRhr != null) {
                         val totalBiologicalAge = (biologicalAgeVo2Max * 0.7) + (biologicalAgeRhr * 0.3)
                         val ageDifference = totalBiologicalAge - userProfile.age!!
-                        WhoopAgeCircle(totalBiologicalAge = totalBiologicalAge, ageDifference = ageDifference)
+                        AgeCircle(totalBiologicalAge = totalBiologicalAge, ageDifference = ageDifference)
                     }
 
                     // Calculate and display biological age from VO2max
