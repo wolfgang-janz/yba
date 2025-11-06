@@ -17,14 +17,13 @@
   <!-- Screen titles -->
   <string name="welcome_screen">Welcome screen</string>
   <string name="age">Age</string>
-  <string name="profile">Profil</string>
+  <string name="profile">Profile</string>
 
   <!-- Welcome screen -->
   <string name="welcome_message">Welcome to YBA!</string>
   <string name="health_connect_logo">YBA logo</string>
   <string name="installed_welcome_message">
-        Health Connect is installed on this device. Use the menu to explore the sample, with each
-        screen demonstrating a different aspect of Health Connect functionality.
+        Health Connect is installed on this device. Use the menu to explore the app.
     </string>
 
   <!-- Privacy policy screen -->
@@ -65,13 +64,13 @@
   <string name="settings">Settings</string>
 
   <!-- Profile screen -->
-  <string name="profile_title">Profil bearbeiten</string>
-  <string name="profile_birth_date_label">Geburtsdatum (TT.MM.JJJJ)</string>
-  <string name="profile_gender_label">Geschlecht</string>
-  <string name="profile_gender_male">Männlich</string>
-  <string name="profile_gender_female">Weiblich</string>
-  <string name="profile_save_button">Speichern</string>
-  <string name="profile_saved_message">Profil erfolgreich gespeichert</string>
-  <string name="profile_birth_date_error">Ungültiges Datum oder Alter nicht zwischen 18-99 Jahren</string>
-  <string name="profile_gender_error">Bitte wählen Sie ein Geschlecht aus</string>
+  <string name="profile_title">Edit Profile</string>
+  <string name="profile_birth_date_label">Date of birth (DD.MM.YYYY)</string>
+  <string name="profile_gender_label">Gender</string>
+  <string name="profile_gender_male">Male</string>
+  <string name="profile_gender_female">Female</string>
+  <string name="profile_save_button">Save</string>
+  <string name="profile_saved_message">Profile saved successfully</string>
+  <string name="profile_birth_date_error">Invalid date or age not between 18-99 years</string>
+  <string name="profile_gender_error">Please select a gender</string>
 </resources>

@@ -22,6 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectClient.Companion.SDK_AVAILABLE
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -50,6 +52,32 @@ class HealthConnectManager(private val context: Context) {
     val response = healthConnectClient.readRecords(
       ReadRecordsRequest(
         recordType = Vo2MaxRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(lastMonth, now)
+      )
+    )
+    return response.records.lastOrNull()
+  }
+
+  suspend fun getLatestRestingHeartRate(): RestingHeartRateRecord? {
+    val now = Instant.now()
+    val lastMonth = now.minusSeconds(30L * 24 * 60 * 60) // 30 days ago
+
+    val response = healthConnectClient.readRecords(
+      ReadRecordsRequest(
+        recordType = RestingHeartRateRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(lastMonth, now)
+      )
+    )
+    return response.records.lastOrNull()
+  }
+
+  suspend fun getLatestHRV(): HeartRateVariabilityRmssdRecord? {
+    val now = Instant.now()
+    val lastMonth = now.minusSeconds(30L * 24 * 60 * 60) // 30 days ago
+
+    val response = healthConnectClient.readRecords(
+      ReadRecordsRequest(
+        recordType = HeartRateVariabilityRmssdRecord::class,
         timeRangeFilter = TimeRangeFilter.between(lastMonth, now)
       )
     )

@@ -99,7 +99,7 @@ fun ProfileScreen(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                // Geburtsdatum Input
+                // Date of birth input
                 OutlinedTextField(
                     value = birthDateInput,
                     onValueChange = viewModel::updateBirthDate,
@@ -120,14 +120,14 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Geschlecht Auswahl
+                // Gender selection
                 Text(
                     text = stringResource(R.string.profile_gender_label),
                     style = MaterialTheme.typography.subtitle1,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Männlich RadioButton
+                // Male RadioButton
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,7 +149,7 @@ fun ProfileScreen(
                     )
                 }
 
-                // Weiblich RadioButton
+                // Female RadioButton
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -184,7 +184,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Speichern Button
+        // Save Button
         Button(
             onClick = { viewModel.saveProfile() },
             enabled = viewModel.isValidBirthDate(birthDateInput) && selectedGender != null,
@@ -193,11 +193,11 @@ fun ProfileScreen(
             Text(text = stringResource(R.string.profile_save_button))
         }
 
-        // Status-Anzeige
+        // Status display
         when (val currentState = uiState) {
             is ProfileViewModel.UiState.Loading -> {
                 Text(
-                    text = "Lädt...",
+                    text = "Loading...",
                     style = MaterialTheme.typography.body2,
                     modifier = Modifier.padding(top = 16.dp)
                 )

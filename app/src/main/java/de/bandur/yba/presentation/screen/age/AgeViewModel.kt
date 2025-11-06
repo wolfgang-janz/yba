@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -30,11 +32,13 @@ import de.bandur.yba.data.HealthConnectManager
 import java.util.UUID
 import kotlinx.coroutines.launch
 
-class DifferentialChangesViewModel(private val healthConnectManager: HealthConnectManager) :
+class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
     ViewModel() {
 
-    val changesDataTypes = setOf(
-        Vo2MaxRecord::class
+    internal val changesDataTypes = setOf(
+        Vo2MaxRecord::class,
+        HeartRateVariabilityRmssdRecord::class,
+        RestingHeartRateRecord::class
     )
 
     val permissions = changesDataTypes.map { HealthPermission.getReadPermission(it) }.toSet()
@@ -48,6 +52,13 @@ class DifferentialChangesViewModel(private val healthConnectManager: HealthConne
     var latestVo2Max: MutableState<Vo2MaxRecord?> = mutableStateOf(null)
         private set
 
+    var latestHRV: MutableState<HeartRateVariabilityRmssdRecord?> = mutableStateOf(null)
+        private set
+
+    var latestRestingHeartRate: MutableState<RestingHeartRateRecord?> = mutableStateOf(null)
+        private set
+
+
     val permissionsLauncher = healthConnectManager.requestPermissionsActivityContract()
 
     fun initialLoad() {
@@ -57,14 +68,23 @@ class DifferentialChangesViewModel(private val healthConnectManager: HealthConne
                 try {
                     latestVo2Max.value = healthConnectManager.getLatestVo2Max()
                     Log.i(TAG, "Latest VO2 Max: ${latestVo2Max.value}")
+
+                    latestHRV.value = healthConnectManager.getLatestHRV()
+                    Log.i(TAG, "Latest HRV: ${latestHRV.value}")
+
+                    latestRestingHeartRate.value = healthConnectManager.getLatestRestingHeartRate()
+                    Log.i(TAG, "Latest Resting Heart Rate: ${latestRestingHeartRate.value}")
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load VO2 Max: ${e.message}")
+                    Log.w(TAG, "Failed to load health data: ${e.message}")
                     latestVo2Max.value = null
+                    latestHRV.value = null
+                    latestRestingHeartRate.value = null
                 }
             }
             uiState = UiState.Done
         }
     }
+
 
     sealed class UiState {
         object Uninitialized : UiState()
@@ -76,13 +96,13 @@ class DifferentialChangesViewModel(private val healthConnectManager: HealthConne
     }
 }
 
-class DifferentialChangesViewModelFactory(
+class AgeViewModelFactory(
     private val healthConnectManager: HealthConnectManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(DifferentialChangesViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(AgeViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DifferentialChangesViewModel(
+            return AgeViewModel(
                 healthConnectManager = healthConnectManager
             ) as T
         }

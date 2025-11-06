@@ -19,6 +19,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.bandur.yba.data.HealthConnectManager
 import de.bandur.yba.data.profile.Gender
 import de.bandur.yba.data.profile.ProfileRepository
 import de.bandur.yba.data.profile.UserProfile
@@ -49,7 +50,7 @@ class ProfileViewModel(private val profileRepository: ProfileRepository) : ViewM
 
     private val _selectedGender = MutableStateFlow<Gender?>(null)
     val selectedGender: StateFlow<Gender?> = _selectedGender.asStateFlow()
-    
+
     companion object {
         val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy")
     }
@@ -76,6 +77,7 @@ class ProfileViewModel(private val profileRepository: ProfileRepository) : ViewM
         _birthDateInput.value = birthDate
     }
 
+
     fun updateGender(gender: Gender) {
         _selectedGender.value = gender
     }
@@ -85,20 +87,20 @@ class ProfileViewModel(private val profileRepository: ProfileRepository) : ViewM
             try {
                 val birthDate = parseBirthDate(_birthDateInput.value)
                 
-                // Validierung
+                // Validation
                 if (birthDate == null) {
-                    _uiState.value = UiState.Error(IllegalArgumentException("Ungültiges Geburtsdatum"))
+                    _uiState.value = UiState.Error(IllegalArgumentException("Invalid date of birth"))
                     return@launch
                 }
                 
                 val age = java.time.Period.between(birthDate, LocalDate.now()).years
                 if (age < 18 || age > 99) {
-                    _uiState.value = UiState.Error(IllegalArgumentException("Alter muss zwischen 18 und 99 Jahren liegen"))
+                    _uiState.value = UiState.Error(IllegalArgumentException("Age must be between 18 and 99 years"))
                     return@launch
                 }
                 
                 if (_selectedGender.value == null) {
-                    _uiState.value = UiState.Error(IllegalArgumentException("Geschlecht nicht ausgewählt"))
+                    _uiState.value = UiState.Error(IllegalArgumentException("Gender not selected"))
                     return@launch
                 }
 

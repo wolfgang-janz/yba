@@ -29,9 +29,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import de.bandur.yba.data.HealthConnectManager
 import de.bandur.yba.presentation.screen.WelcomeScreen
-import de.bandur.yba.presentation.screen.age.DifferentialChangesScreen
-import de.bandur.yba.presentation.screen.age.DifferentialChangesViewModel
-import de.bandur.yba.presentation.screen.age.DifferentialChangesViewModelFactory
+import de.bandur.yba.presentation.screen.age.AgeScreen
+import de.bandur.yba.presentation.screen.age.AgeViewModel
+import de.bandur.yba.presentation.screen.age.AgeViewModelFactory
 import de.bandur.yba.presentation.screen.privacypolicy.PrivacyPolicyScreen
 import de.bandur.yba.presentation.screen.profile.ProfileScreen
 import de.bandur.yba.presentation.screen.profile.ProfileViewModel
@@ -75,22 +75,26 @@ fun HealthConnectNavigation(
         initial = de.bandur.yba.data.profile.UserProfile()
       )
       
-      val viewModel: DifferentialChangesViewModel = viewModel(
-        factory = DifferentialChangesViewModelFactory(
+      val viewModel: AgeViewModel = viewModel(
+        factory = AgeViewModelFactory(
           healthConnectManager = healthConnectManager
         )
       )
       val latestVo2Max by viewModel.latestVo2Max
+      val latestHRV by viewModel.latestHRV
+      val latestRestingHeartRate by viewModel.latestRestingHeartRate
       val permissionsGranted by viewModel.permissionsGranted
       val permissions = viewModel.permissions
       val onPermissionsResult = {viewModel.initialLoad()}
       val permissionsLauncher =
         rememberLauncherForActivityResult(viewModel.permissionsLauncher) {
           onPermissionsResult()}
-      DifferentialChangesScreen(
+      AgeScreen(
         permissionsGranted = permissionsGranted,
         permissions = permissions,
         latestVo2Max = latestVo2Max,
+        latestHRV = latestHRV,
+        latestRestingHeartRate = latestRestingHeartRate,
         userProfile = userProfile,
         uiState = viewModel.uiState,
         onError = { exception ->

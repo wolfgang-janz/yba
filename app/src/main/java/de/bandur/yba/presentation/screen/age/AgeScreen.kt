@@ -16,6 +16,7 @@
 package de.bandur.yba.presentation.screen.age
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,9 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import de.bandur.yba.R
 import de.bandur.yba.data.profile.Gender
@@ -47,6 +50,7 @@ fun AgeScreen(
     permissionsGranted: Boolean,
     latestVo2Max: Vo2MaxRecord?,
     latestHRV: HeartRateVariabilityRmssdRecord?,
+    latestRestingHeartRate: RestingHeartRateRecord?,
     userProfile: UserProfile?,
     uiState: AgeViewModel.UiState,
     onError: (Throwable?) -> Unit = {},
@@ -58,9 +62,9 @@ fun AgeScreen(
     // notification for the same error when the screen is recomposed, or configuration changes etc.
     val errorId = rememberSaveable { mutableStateOf(UUID.randomUUID()) }
 
-    // Funktion zur Berechnung des biologischen Alters basierend auf VO₂max
+    // Function to calculate biological age based on VO₂max
     fun calculateBiologicalAge(chronologicalAge: Int, vo2Max: Double, gender: Gender): Double? {
-        // Referenz VO₂max Werte basierend auf Geschlecht und Alter
+        // Reference VO₂max values based on gender and age
         val referenceVo2Max = when (gender) {
             Gender.MALE -> when (chronologicalAge) {
                 in 18..25 -> 47.0
@@ -86,11 +90,39 @@ fun AgeScreen(
             }
         }
 
-        // Durchschnittliche Abnahme pro Jahr: ca. 0.5 ml/kg/min
+        // Average decrease per year: approx. 0.5 ml/kg/min
         val decreasePerYear = 0.5
 
-        // Berechnung: Chronologisches Alter + (Referenz VO₂max - Aktueller VO₂max) / Abnahme pro Jahr
+        // Calculation: Chronological Age + (Reference VO₂max - Current VO₂max) / Decrease per year
         return chronologicalAge + (referenceVo2Max - vo2Max) / decreasePerYear
+    }
+
+    // Function to calculate biological age based on resting heart rate
+    fun calculateBiologicalAgeFromRestingHeartRate(chronologicalAge: Int, restingHeartRate: Long, gender: Gender): Double? {
+        val referenceRestingHeartRate = when (gender) {
+            Gender.MALE -> when (chronologicalAge) {
+                in 18..25 -> 61
+                in 26..35 -> 61
+                in 36..45 -> 62
+                in 46..55 -> 63
+                in 56..65 -> 61
+                else -> 61 // 65+
+            }
+            Gender.FEMALE -> when (chronologicalAge) {
+                in 18..25 -> 65
+                in 26..35 -> 64
+                in 36..45 -> 64
+                in 46..55 -> 65
+                in 56..65 -> 64
+                else -> 64 // 65+
+            }
+        }
+
+        // An increase of 1 bpm in resting heart rate is associated with roughly 0.4 years of aging.
+        val increasePerBpm = 0.4
+
+        // Calculation: Chronological Age + (Current RHR - Reference RHR) * Increase per BPM
+        return chronologicalAge + (restingHeartRate - referenceRestingHeartRate) * increasePerBpm
     }
 
     LaunchedEffect(uiState) {
@@ -111,25 +143,37 @@ fun AgeScreen(
 
     if (uiState != AgeViewModel.UiState.Uninitialized) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profil-Informationen anzeigen
+            // Display profile information
             item {
                 if (userProfile?.age != null && userProfile.gender != null && userProfile.birthDate != null) {
-                    Text(
-                        text = "Profil: ${userProfile.age} Jahre (geboren ${userProfile.birthDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))}), ${
-                            when (userProfile.gender) {
-                                Gender.MALE -> "Männlich"
-                                Gender.FEMALE -> "Weiblich"
-                            }
-                        }",
-                        style = MaterialTheme.typography.h6,
-                        modifier = Modifier.padding(8.dp)
-                    )
+                    val biologicalAgeVo2Max = latestVo2Max?.let { vo2Max ->
+                        calculateBiologicalAge(
+                            userProfile.age!!,
+                            vo2Max.vo2MillilitersPerMinuteKilogram,
+                            userProfile.gender!!
+                        )
+                    }
+                    val biologicalAgeRhr = latestRestingHeartRate?.let { restingHeartRate ->
+                        calculateBiologicalAgeFromRestingHeartRate(
+                            userProfile.age!!,
+                            restingHeartRate.beatsPerMinute,
+                            userProfile.gender!!
+                        )
+                    }
 
-                    // Biologisches Alter berechnen und anzeigen
+                    if (biologicalAgeVo2Max != null && biologicalAgeRhr != null) {
+                        val totalBiologicalAge = (biologicalAgeVo2Max * 0.7) + (biologicalAgeRhr * 0.3)
+                        val ageDifference = totalBiologicalAge - userProfile.age!!
+                        WhoopAgeCircle(totalBiologicalAge = totalBiologicalAge, ageDifference = ageDifference)
+                    }
+
+                    // Calculate and display biological age from VO2max
                     latestVo2Max?.let { vo2Max ->
                         val currentAge = userProfile.age // Local copy to avoid smart cast issues
                         val currentGender = userProfile.gender
@@ -142,44 +186,48 @@ fun AgeScreen(
                             )
 
                             biologicalAge?.let { bioAge ->
-                                Text(
-                                    text = "Biologisches Alter: ${String.format("%.1f", bioAge)} Jahre",
-                                    style = MaterialTheme.typography.h5,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-
                                 val ageDifference = bioAge - currentAge
-                                val differenceColor = if (ageDifference > 0) {
-                                    MaterialTheme.colors.error
-                                } else {
-                                    MaterialTheme.colors.primary
-                                }
-
-                                val differenceText = if (ageDifference > 0) {
-                                    "Du bist ${String.format("%.1f", ageDifference)} Jahre älter als dein chronologisches Alter"
-                                } else {
-                                    "Du bist ${String.format("%.1f", kotlin.math.abs(ageDifference))} Jahre jünger als dein chronologisches Alter"
-                                }
-
-                                Text(
-                                    text = differenceText,
-                                    color = differenceColor,
-                                    style = MaterialTheme.typography.body1,
-                                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 16.dp)
+                                MetricCard(
+                                    title = "VO2 MAX",
+                                    value = "${vo2Max.vo2MillilitersPerMinuteKilogram.toInt()} ml/kg/min",
+                                    ageImpact = ageDifference,
+                                    sliderValue = vo2Max.vo2MillilitersPerMinuteKilogram.toFloat(),
+                                    sliderRange = 15f..70f,
+                                    sliderLabelMin = "15",
+                                    sliderLabelMax = "70"
                                 )
                             }
                         }
                     }
-                    latestHRV?.let { hrv ->
-                        Text(
-                            text = "Letzter HRV-Wert: ${hrv.heartRateVariabilityMillis} ms",
-                            style = MaterialTheme.typography.h6,
-                            modifier = Modifier.padding(8.dp)
-                        )
+                    // Calculate and display biological age from Resting Heart Rate
+                    latestRestingHeartRate?.let { restingHeartRate ->
+                        val currentAge = userProfile.age // Local copy to avoid smart cast issues
+                        val currentGender = userProfile.gender
+
+                        if (currentAge != null && currentGender != null) {
+                            val biologicalAge = calculateBiologicalAgeFromRestingHeartRate(
+                                currentAge,
+                                restingHeartRate.beatsPerMinute,
+                                currentGender
+                            )
+
+                            biologicalAge?.let { bioAge ->
+                                val ageDifference = bioAge - currentAge
+                                MetricCard(
+                                    title = "RHR",
+                                    value = "${restingHeartRate.beatsPerMinute} bpm",
+                                    ageImpact = ageDifference,
+                                    sliderValue = restingHeartRate.beatsPerMinute.toFloat(),
+                                    sliderRange = 40f..80f,
+                                    sliderLabelMin = "40",
+                                    sliderLabelMax = "80"
+                                )
+                            }
+                        }
                     }
                 } else {
                     Text(
-                        text = "Bitte gehen Sie zum Profil-Menü und geben Sie Ihr Geburtsdatum und Geschlecht ein.",
+                        text = "Please go to the profile menu and enter your date of birth and gender.",
                         style = MaterialTheme.typography.body1,
                         color = MaterialTheme.colors.error,
                         modifier = Modifier.padding(16.dp)
@@ -196,16 +244,6 @@ fun AgeScreen(
                     ) {
                         Text(text = stringResource(R.string.permissions_button_label))
                     }
-                }
-            } else {
-                item {
-                    val vo2MaxText = latestVo2Max?.let { record ->
-                        "Latest VO2 Max: ${String.format("%.1f", record.vo2MillilitersPerMinuteKilogram)} ml/kg/min"
-                    } ?: "Latest VO2 Max: Not available"
-                    Text(
-                        modifier = Modifier.padding(8.dp),
-                        text = vo2MaxText
-                    )
                 }
             }
         }
