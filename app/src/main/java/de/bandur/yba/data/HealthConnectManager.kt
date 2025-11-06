@@ -71,19 +71,6 @@ class HealthConnectManager(private val context: Context) {
     return response.records.lastOrNull()
   }
 
-  suspend fun getLatestHRV(): HeartRateVariabilityRmssdRecord? {
-    val now = Instant.now()
-    val lastMonth = now.minusSeconds(30L * 24 * 60 * 60) // 30 days ago
-
-    val response = healthConnectClient.readRecords(
-      ReadRecordsRequest(
-        recordType = HeartRateVariabilityRmssdRecord::class,
-        timeRangeFilter = TimeRangeFilter.between(lastMonth, now)
-      )
-    )
-    return response.records.lastOrNull()
-  }
-
   fun checkAvailability() {
     availability.value = when {
       HealthConnectClient.getSdkStatus(context) == SDK_AVAILABLE -> HealthConnectAvailability.INSTALLED

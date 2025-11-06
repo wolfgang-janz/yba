@@ -49,7 +49,6 @@ fun AgeScreen(
     permissions: Set<String>,
     permissionsGranted: Boolean,
     latestVo2Max: Vo2MaxRecord?,
-    latestHRV: HeartRateVariabilityRmssdRecord?,
     latestRestingHeartRate: RestingHeartRateRecord?,
     userProfile: UserProfile?,
     uiState: AgeViewModel.UiState,

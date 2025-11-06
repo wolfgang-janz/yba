@@ -52,9 +52,6 @@ class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
     var latestVo2Max: MutableState<Vo2MaxRecord?> = mutableStateOf(null)
         private set
 
-    var latestHRV: MutableState<HeartRateVariabilityRmssdRecord?> = mutableStateOf(null)
-        private set
-
     var latestRestingHeartRate: MutableState<RestingHeartRateRecord?> = mutableStateOf(null)
         private set
 
@@ -69,15 +66,11 @@ class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
                     latestVo2Max.value = healthConnectManager.getLatestVo2Max()
                     Log.i(TAG, "Latest VO2 Max: ${latestVo2Max.value}")
 
-                    latestHRV.value = healthConnectManager.getLatestHRV()
-                    Log.i(TAG, "Latest HRV: ${latestHRV.value}")
-
                     latestRestingHeartRate.value = healthConnectManager.getLatestRestingHeartRate()
                     Log.i(TAG, "Latest Resting Heart Rate: ${latestRestingHeartRate.value}")
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to load health data: ${e.message}")
                     latestVo2Max.value = null
-                    latestHRV.value = null
                     latestRestingHeartRate.value = null
                 }
             }

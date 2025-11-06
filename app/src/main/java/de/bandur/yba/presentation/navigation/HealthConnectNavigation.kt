@@ -81,7 +81,6 @@ fun HealthConnectNavigation(
         )
       )
       val latestVo2Max by viewModel.latestVo2Max
-      val latestHRV by viewModel.latestHRV
       val latestRestingHeartRate by viewModel.latestRestingHeartRate
       val permissionsGranted by viewModel.permissionsGranted
       val permissions = viewModel.permissions
@@ -93,7 +92,6 @@ fun HealthConnectNavigation(
         permissionsGranted = permissionsGranted,
         permissions = permissions,
         latestVo2Max = latestVo2Max,
-        latestHRV = latestHRV,
         latestRestingHeartRate = latestRestingHeartRate,
         userProfile = userProfile,
         uiState = viewModel.uiState,
