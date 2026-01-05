@@ -31,5 +31,6 @@ enum class Screen(val route: String, val titleId: Int, val hasMenuItem: Boolean 
   WelcomeScreen("welcome_screen", R.string.welcome_screen, false),
   Age("age", R.string.age),
   Profile("profile", R.string.profile),
-  PrivacyPolicy("privacy_policy", R.string.privacy_policy, false)
+  PrivacyPolicy("privacy_policy", R.string.privacy_policy, false),
+  Permission("permission", R.string.permission, false)
 }

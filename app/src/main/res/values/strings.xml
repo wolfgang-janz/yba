@@ -71,6 +71,7 @@
   <string name="profile_gender_female">Female</string>
   <string name="profile_save_button">Save</string>
   <string name="profile_saved_message">Profile saved successfully</string>
-  <string name="profile_birth_date_error">Invalid date or age not between 18-99 years</string>
+  <string name="profile_birth_date_error">Invalid date or age not between 18–99 years</string>
   <string name="profile_gender_error">Please select a gender</string>
+  <string name="permission">Permission</string>
 </resources>

@@ -33,10 +33,16 @@ data class UserProfile(
     val gender: Gender? = null
 ) {
     /**
+     * Überprüft, ob das Profil vollständig ist
+     */
+    val isComplete: Boolean
+        get() = birthDate != null && gender != null
+
+    /**
      * Berechnet das aktuelle Alter basierend auf dem Geburtsdatum
      */
     val age: Int?
-        get() = birthDate?.let { 
+        get() = birthDate?.let {
             Period.between(it, LocalDate.now()).years
         }
 }

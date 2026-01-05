@@ -16,11 +16,18 @@
 package de.bandur.yba.presentation.navigation
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -48,7 +55,15 @@ fun HealthConnectNavigation(
   scaffoldState: ScaffoldState,
 ) {
   val scope = rememberCoroutineScope()
-  NavHost(navController = navController, startDestination = Screen.WelcomeScreen.route) {
+  val context = LocalContext.current
+  val profileRepository = de.bandur.yba.data.profile.ProfileRepository(context)
+  val userProfile by profileRepository.userProfile.collectAsState(
+    initial = de.bandur.yba.data.profile.UserProfile()
+  )
+
+  val startDestination = Screen.Permission.route
+
+  NavHost(navController = navController, startDestination = startDestination) {
     val availability by healthConnectManager.availability
     composable(Screen.WelcomeScreen.route) {
       WelcomeScreen(
@@ -69,12 +84,6 @@ fun HealthConnectNavigation(
       PrivacyPolicyScreen()
     }
     composable(Screen.Age.route) {
-      val context = LocalContext.current
-      val profileRepository = de.bandur.yba.data.profile.ProfileRepository(context)
-      val userProfile by profileRepository.userProfile.collectAsState(
-        initial = de.bandur.yba.data.profile.UserProfile()
-      )
-      
       val viewModel: AgeViewModel = viewModel(
         factory = AgeViewModelFactory(
           healthConnectManager = healthConnectManager
@@ -84,10 +93,11 @@ fun HealthConnectNavigation(
       val latestRestingHeartRate by viewModel.latestRestingHeartRate
       val permissionsGranted by viewModel.permissionsGranted
       val permissions = viewModel.permissions
-      val onPermissionsResult = {viewModel.initialLoad()}
+      val onPermissionsResult = { viewModel.initialLoad() }
       val permissionsLauncher =
         rememberLauncherForActivityResult(viewModel.permissionsLauncher) {
-          onPermissionsResult()}
+          onPermissionsResult()
+        }
       AgeScreen(
         permissionsGranted = permissionsGranted,
         permissions = permissions,
@@ -102,11 +112,11 @@ fun HealthConnectNavigation(
           viewModel.initialLoad()
         },
         onPermissionsLaunch = { values ->
-          permissionsLauncher.launch(values)}
+          permissionsLauncher.launch(values)
+        }
       )
     }
     composable(Screen.Profile.route) {
-      val context = LocalContext.current
       val viewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModelFactory(context)
       )
@@ -116,9 +126,51 @@ fun HealthConnectNavigation(
         },
         onSaved = {
           showExceptionSnackbar(scaffoldState, scope, null, "Profil gespeichert!")
+          navController.navigate(Screen.WelcomeScreen.route) {
+            popUpTo(Screen.Profile.route) { inclusive = true }
+          }
         },
         viewModel = viewModel
       )
+    }
+    composable(Screen.Permission.route) {
+      val viewModel: AgeViewModel = viewModel(
+        factory = AgeViewModelFactory(
+          healthConnectManager = healthConnectManager
+        )
+      )
+      val permissionsGranted by viewModel.permissionsGranted
+      val permissions = viewModel.permissions
+      val onPermissionsResult = {
+        val destination = if (userProfile.isComplete) {
+          Screen.WelcomeScreen.route
+        } else {
+          Screen.Profile.route
+        }
+        navController.navigate(destination) {
+          popUpTo(Screen.Permission.route) { inclusive = true }
+        }
+      }
+      val permissionsLauncher =
+        rememberLauncherForActivityResult(viewModel.permissionsLauncher) {
+          onPermissionsResult()
+        }
+
+      LaunchedEffect(Unit) {
+        if (!permissionsGranted) {
+          permissionsLauncher.launch(permissions)
+        } else {
+          onPermissionsResult()
+        }
+      }
+      // Show a loading indicator or a splash screen while waiting for permission result
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        CircularProgressIndicator()
+      }
     }
   }
 }
