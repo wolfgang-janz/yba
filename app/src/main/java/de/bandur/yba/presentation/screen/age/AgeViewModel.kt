@@ -23,8 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.units.Percentage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -38,7 +40,8 @@ class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
     internal val changesDataTypes = setOf(
         Vo2MaxRecord::class,
         HeartRateVariabilityRmssdRecord::class,
-        RestingHeartRateRecord::class
+        RestingHeartRateRecord::class,
+        LeanBodyMassRecord::class
     )
 
     val permissions = changesDataTypes.map { HealthPermission.getReadPermission(it) }.toSet()
@@ -55,6 +58,9 @@ class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
     var latestRestingHeartRate: MutableState<RestingHeartRateRecord?> = mutableStateOf(null)
         private set
 
+    var latestLeanBodyMass: MutableState<Percentage?> = mutableStateOf(null)
+        private set
+
 
     val permissionsLauncher = healthConnectManager.requestPermissionsActivityContract()
 
@@ -65,13 +71,25 @@ class AgeViewModel(private val healthConnectManager: HealthConnectManager) :
                 try {
                     latestVo2Max.value = healthConnectManager.getLatestVo2Max()
                     Log.i(TAG, "Latest VO2 Max: ${latestVo2Max.value}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load VO2 Max: ${e.message}")
+                    latestVo2Max.value = null
+                }
 
+                try {
                     latestRestingHeartRate.value = healthConnectManager.getLatestRestingHeartRate()
                     Log.i(TAG, "Latest Resting Heart Rate: ${latestRestingHeartRate.value}")
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load health data: ${e.message}")
-                    latestVo2Max.value = null
+                    Log.w(TAG, "Failed to load Resting Heart Rate: ${e.message}")
                     latestRestingHeartRate.value = null
+                }
+
+                try {
+                    latestLeanBodyMass.value = healthConnectManager.getLatestLeanBodyMass()
+                    Log.i(TAG, "Latest Lean Body Mass: ${latestLeanBodyMass.value}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load Lean Body Mass: ${e.message}")
+                    latestLeanBodyMass.value = null
                 }
             }
             uiState = UiState.Done

@@ -91,6 +91,7 @@ fun HealthConnectNavigation(
       )
       val latestVo2Max by viewModel.latestVo2Max
       val latestRestingHeartRate by viewModel.latestRestingHeartRate
+      val latestLeanBodyMass by viewModel.latestLeanBodyMass
       val permissionsGranted by viewModel.permissionsGranted
       val permissions = viewModel.permissions
       val onPermissionsResult = { viewModel.initialLoad() }
@@ -103,6 +104,7 @@ fun HealthConnectNavigation(
         permissions = permissions,
         latestVo2Max = latestVo2Max,
         latestRestingHeartRate = latestRestingHeartRate,
+        latestLeanBodyMass = latestLeanBodyMass,
         userProfile = userProfile,
         uiState = viewModel.uiState,
         onError = { exception ->

@@ -22,11 +22,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectClient.Companion.SDK_AVAILABLE
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Mass
+import androidx.health.connect.client.units.Percentage
 import java.time.Instant
 
 // The minimum android level that can use Health Connect
@@ -69,6 +74,25 @@ class HealthConnectManager(private val context: Context) {
       )
     )
     return response.records.lastOrNull()
+  }
+
+  suspend fun getLatestLeanBodyMass(): Percentage? {
+    val now = Instant.now()
+    val lastMonth = now.minusSeconds(30L * 24 * 60 * 60) // 30 days ago
+
+      val response = healthConnectClient.readRecords(
+          ReadRecordsRequest(
+              recordType = BodyFatRecord::class,
+              timeRangeFilter = TimeRangeFilter.between(lastMonth, now)
+          )
+      )
+
+      var fat = response.records.lastOrNull()
+
+      if(fat == null) {
+          return null
+      }
+      return Percentage(100-fat.percentage.value)
   }
 
   fun checkAvailability() {

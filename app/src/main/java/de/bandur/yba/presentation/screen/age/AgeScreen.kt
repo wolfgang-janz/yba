@@ -33,8 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.units.Percentage
 import de.bandur.yba.R
 import de.bandur.yba.data.profile.Gender
 import de.bandur.yba.data.profile.UserProfile
@@ -50,6 +52,7 @@ fun AgeScreen(
     permissionsGranted: Boolean,
     latestVo2Max: Vo2MaxRecord?,
     latestRestingHeartRate: RestingHeartRateRecord?,
+    latestLeanBodyMass: Percentage?,
     userProfile: UserProfile?,
     uiState: AgeViewModel.UiState,
     onError: (Throwable?) -> Unit = {},
@@ -76,6 +79,7 @@ fun AgeScreen(
                 in 86..99 -> 26.0
                 else -> return null
             }
+
             Gender.FEMALE -> when (chronologicalAge) {
                 in 18..25 -> 38.0
                 in 26..35 -> 34.0
@@ -97,7 +101,11 @@ fun AgeScreen(
     }
 
     // Function to calculate biological age based on resting heart rate
-    fun calculateBiologicalAgeFromRestingHeartRate(chronologicalAge: Int, restingHeartRate: Long, gender: Gender): Double? {
+    fun calculateBiologicalAgeFromRestingHeartRate(
+        chronologicalAge: Int,
+        restingHeartRate: Long,
+        gender: Gender
+    ): Double? {
         val referenceRestingHeartRate = when (gender) {
             Gender.MALE -> when (chronologicalAge) {
                 in 18..25 -> 61
@@ -107,6 +115,7 @@ fun AgeScreen(
                 in 56..65 -> 61
                 else -> 61 // 65+
             }
+
             Gender.FEMALE -> when (chronologicalAge) {
                 in 18..25 -> 65
                 in 26..35 -> 64
@@ -122,6 +131,42 @@ fun AgeScreen(
 
         // Calculation: Chronological Age + (Current RHR - Reference RHR) * Increase per BPM
         return chronologicalAge + (restingHeartRate - referenceRestingHeartRate) * increasePerBpm
+    }
+
+    // Function to calculate biological age based on lean body mass
+    fun calculateBiologicalAgeFromLeanBodyMass(
+        chronologicalAge: Int,
+        leanBodyMassPercentage: Double,
+        gender: Gender
+    ): Double? {
+        val referenceLeanBodyMass = when (gender) {
+            Gender.MALE -> when (chronologicalAge) {
+                in 18..25 -> 0.85
+                in 26..35 -> 0.83
+                in 36..45 -> 0.81
+                in 46..55 -> 0.79
+                in 56..65 -> 0.77
+                else -> 0.75 // 65+
+            }
+
+            Gender.FEMALE -> when (chronologicalAge) {
+                in 18..25 -> 0.75
+                in 26..35 -> 0.73
+                in 36..45 -> 0.71
+                in 46..55 -> 0.69
+                in 56..65 -> 0.67
+                else -> 0.65 // 65+
+            }
+        }
+
+        // A decrease of 1% in lean body mass is associated with roughly 1 year of aging.
+        val increasePerPercent = 1.0
+
+        // Convert incoming percentage (e.g., 85.0) to a decimal (0.85)
+        val currentLbmDecimal = leanBodyMassPercentage / 100.0
+
+        // Calculation: Chronological Age + (Reference LBM - Current LBM) * 100 * Increase per Percent
+        return chronologicalAge + (referenceLeanBodyMass - currentLbmDecimal) * 100 * increasePerPercent
     }
 
     LaunchedEffect(uiState) {
@@ -165,11 +210,28 @@ fun AgeScreen(
                             userProfile.gender!!
                         )
                     }
+                    val biologicalAgeLbm = latestLeanBodyMass?.let { leanBodyMass ->
+                        calculateBiologicalAgeFromLeanBodyMass(
+                            userProfile.age!!,
+                            leanBodyMass.value,
+                            userProfile.gender!!
+                        )
+                    }
 
-                    if (biologicalAgeVo2Max != null && biologicalAgeRhr != null) {
-                        val totalBiologicalAge = (biologicalAgeVo2Max * 0.7) + (biologicalAgeRhr * 0.3)
+                    val ageComponents = mutableListOf<Pair<Double, Double>>()
+                    biologicalAgeVo2Max?.let { ageComponents.add(it to 0.6) }
+                    biologicalAgeRhr?.let { ageComponents.add(it to 0.2) }
+                    biologicalAgeLbm?.let { ageComponents.add(it to 0.2) }
+
+                    if (ageComponents.isNotEmpty()) {
+                        val totalWeight = ageComponents.sumOf { it.second }
+                        val weightedSum = ageComponents.sumOf { it.first * it.second }
+                        val totalBiologicalAge = weightedSum / totalWeight
                         val ageDifference = totalBiologicalAge - userProfile.age!!
-                        AgeCircle(totalBiologicalAge = totalBiologicalAge, ageDifference = ageDifference)
+                        AgeCircle(
+                            totalBiologicalAge = totalBiologicalAge,
+                            ageDifference = ageDifference
+                        )
                     }
 
                     // Calculate and display biological age from VO2max
@@ -188,7 +250,7 @@ fun AgeScreen(
                                 val ageDifference = bioAge - currentAge
                                 MetricCard(
                                     title = "VO2 MAX",
-                                    value = "${vo2Max.vo2MillilitersPerMinuteKilogram.toInt()} ml/kg/min",
+                                    value = "${String.format("%.2f", vo2Max.vo2MillilitersPerMinuteKilogram)} ml/kg/min",
                                     ageImpact = ageDifference,
                                     sliderValue = vo2Max.vo2MillilitersPerMinuteKilogram.toFloat(),
                                     sliderRange = 15f..70f,
@@ -213,13 +275,39 @@ fun AgeScreen(
                             biologicalAge?.let { bioAge ->
                                 val ageDifference = bioAge - currentAge
                                 MetricCard(
-                                    title = "RHR",
+                                    title = "Resting Heart Rate",
                                     value = "${restingHeartRate.beatsPerMinute} bpm",
                                     ageImpact = ageDifference,
                                     sliderValue = restingHeartRate.beatsPerMinute.toFloat(),
-                                    sliderRange = 40f..80f,
+                                    sliderRange = 40f..100f,
                                     sliderLabelMin = "40",
-                                    sliderLabelMax = "80"
+                                    sliderLabelMax = "100"
+                                )
+                            }
+                        }
+                    }
+                    // Calculate and display biological age from Lean Body Mass
+                    latestLeanBodyMass?.let { leanBodyMass ->
+                        val currentAge = userProfile.age // Local copy to avoid smart cast issues
+                        val currentGender = userProfile.gender
+
+                        if (currentAge != null && currentGender != null) {
+                            val biologicalAge = calculateBiologicalAgeFromLeanBodyMass(
+                                currentAge,
+                                leanBodyMass.value,
+                                currentGender
+                            )
+
+                            biologicalAge?.let { bioAge ->
+                                val ageDifference = bioAge - currentAge
+                                MetricCard(
+                                    title = "Lean Body Mass",
+                                    value = "${String.format("%.2f", leanBodyMass.value)}  %",
+                                    ageImpact = ageDifference,
+                                    sliderValue = leanBodyMass.value.toFloat(),
+                                    sliderRange = 40f..100f,
+                                    sliderLabelMin = "40",
+                                    sliderLabelMax = "100"
                                 )
                             }
                         }
@@ -248,3 +336,4 @@ fun AgeScreen(
         }
     }
 }
+
